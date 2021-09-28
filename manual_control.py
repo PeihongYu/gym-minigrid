@@ -27,8 +27,12 @@ def reset():
     redraw(obs)
 
 def step(action):
+    print(action)
+    # if not isinstance(action, list):
+    #     action = [action]
     obs, reward, done, info = env.step(action)
-    print('step=%s, reward=%.2f' % (env.step_count, reward))
+    # print('step=%s, reward=%.2f' % (env.step_count, reward))
+    print('step=', env.step_count, ', reward=', reward)
 
     if done:
         print('done!')
@@ -37,7 +41,7 @@ def step(action):
         redraw(obs)
 
 def key_handler(event):
-    print('pressed', event.key)
+    # print('pressed', event.key)
 
     if event.key == 'escape':
         window.close()
@@ -72,11 +76,69 @@ def key_handler(event):
         step(env.actions.done)
         return
 
+actions = []
+def key_handler2(event):
+    # print('pressed', event.key)
+
+    if event.key == 'escape':
+        window.close()
+        return
+
+    if event.key == 'backspace':
+        reset()
+        return
+
+    if event.key == 'left':
+        actions.append(env.actions.left)
+        if len(actions) == 2:
+            step(actions)
+            actions.clear()
+        return
+    if event.key == 'right':
+        actions.append(env.actions.right)
+        if len(actions) == 2:
+            step(actions)
+            actions.clear()
+        return
+    if event.key == 'up':
+        actions.append(env.actions.forward)
+        if len(actions) == 2:
+            step(actions)
+            actions.clear()
+        return
+
+    # Spacebar
+    if event.key == ' ':
+        actions.append(env.actions.toggle)
+        if len(actions) == 2:
+            step(actions)
+            actions.clear()
+        return
+    if event.key == 'pageup':
+        actions.append(env.actions.pickup)
+        if len(actions) == 2:
+            step(actions)
+            actions.clear()
+        return
+    if event.key == 'pagedown':
+        actions.append(env.actions.drop)
+        if len(actions) == 2:
+            step(actions)
+            actions.clear()
+        return
+
+    if event.key == 'enter':
+        actions.append(env.actions.done)
+        if len(actions) == 2:
+            step(actions)
+            actions.clear()
+        return
+
 parser = argparse.ArgumentParser()
 parser.add_argument(
     "--env",
     help="gym environment to load",
-    default='MiniGrid-MultiRoom-N6-v0'
+    default='MiniGrid-MultiAgent-N6-v0'
 )
 parser.add_argument(
     "--seed",
@@ -104,6 +166,9 @@ env = gym.make(args.env)
 if args.agent_view:
     env = RGBImgPartialObsWrapper(env)
     env = ImgObsWrapper(env)
+
+env = SingleAgentWrapper(env)
+agent_num = len(env.agents)
 
 window = Window('gym_minigrid - ' + args.env)
 window.reg_key_handler(key_handler)

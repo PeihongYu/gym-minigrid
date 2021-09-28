@@ -121,7 +121,7 @@ class OneHotPartialObsWrapper(gym.core.ObservationWrapper):
 
         self.tile_size = tile_size
 
-        obs_shape = env.observation_space['image'].shape
+        obs_shape = env.observation_space.spaces['image'].shape
 
         # Number of bits per cell
         num_bits = len(OBJECT_TO_IDX) + len(COLOR_TO_IDX) + len(STATE_TO_IDX)
@@ -331,6 +331,21 @@ class ViewSizeWrapper(gym.core.Wrapper):
 
     def step(self, action):
         return self.env.step(action)
+
+
+class SingleAgentWrapper(gym.core.Wrapper):
+    def __init__(self, env):
+        super().__init__(env)
+        self.env = env
+
+    def reset(self, **kwargs):
+        obs = self.env.reset(**kwargs)
+        return obs[0]
+
+    def step(self, action):
+        obs, rewards, done, info = self.env.step([action])
+        return obs[0], rewards[0], done, info
+
 
 from .minigrid import Goal
 class DirectionObsWrapper(gym.core.ObservationWrapper):
