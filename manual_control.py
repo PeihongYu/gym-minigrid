@@ -33,6 +33,7 @@ def step(action):
     obs, reward, done, info = env.step(action)
     # print('step=%s, reward=%.2f' % (env.step_count, reward))
     print('step=', env.step_count, ', reward=', reward)
+    print(env.agents[0].pos)
 
     if done:
         print('done!')
@@ -138,7 +139,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument(
     "--env",
     help="gym environment to load",
-    default='MiniGrid-MultiAgent-N6-v0'
+    default='MiniGrid-MultiAgent-N2-S4-v0'
 )
 parser.add_argument(
     "--seed",
@@ -167,11 +168,12 @@ if args.agent_view:
     env = RGBImgPartialObsWrapper(env)
     env = ImgObsWrapper(env)
 
-env = SingleAgentWrapper(env)
-agent_num = len(env.agents)
+# env = FullyObsWrapper(env)
+# env = SingleAgentWrapper(env)
+# agent_num = len(env.agents)
 
 window = Window('gym_minigrid - ' + args.env)
-window.reg_key_handler(key_handler)
+window.reg_key_handler(key_handler2)
 
 reset()
 

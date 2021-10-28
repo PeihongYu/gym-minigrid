@@ -225,27 +225,24 @@ class FullyObsWrapper(gym.core.ObservationWrapper):
 
     def __init__(self, env):
         super().__init__(env)
+        self.size = env.maxNumRooms * (env.maxRoomSize - 1) + 1
+        # self.size = self.env.width
 
         self.observation_space.spaces["image"] = spaces.Box(
             low=0,
             high=255,
-            shape=(self.env.width, self.env.height, 3),  # number of cells
+            shape=(self.size, self.size, 3),  # number of cells
             dtype='uint8'
         )
 
     def observation(self, obs):
         env = self.unwrapped
         full_grid = env.grid.encode()
-        full_grid[env.agent_pos[0]][env.agent_pos[1]] = np.array([
-            OBJECT_TO_IDX['agent'],
-            COLOR_TO_IDX['red'],
-            env.agent_dir
-        ])
 
-        return {
-            'mission': obs['mission'],
-            'image': full_grid
-        }
+        for cur in obs:
+            cur['image'] = full_grid[0:self.size, 0:self.size]
+
+        return obs
 
 class FlatObsWrapper(gym.core.ObservationWrapper):
     """
@@ -345,6 +342,74 @@ class SingleAgentWrapper(gym.core.Wrapper):
     def step(self, action):
         obs, rewards, done, info = self.env.step([action])
         return obs[0], rewards[0], done, info
+
+
+class TwoAgentWrapper(gym.core.Wrapper):
+    def __init__(self, env, mode="partial"):
+        super().__init__(env)
+        self.env = env
+
+        # Actions are discrete integer values
+        self.anum = self.env.unwrapped.action_space.n
+        # self.action_space = spaces.MultiDiscrete([anum, anum])
+        self.action_space = spaces.Discrete(self.anum * self.anum)
+
+        # Override default view size
+        agent_view_size = env.unwrapped.agent_view_size
+
+        self.mode = mode
+        if self.mode == "partial":
+            c = 6
+        else:
+            c = 3
+
+        # Compute observation space with specified view size
+        observation_space = gym.spaces.Box(
+            low=0,
+            high=255,
+            shape=(agent_view_size, agent_view_size, c),
+            dtype='uint8'
+        )
+
+        # Override the environment's observation space
+        self.observation_space = spaces.Dict({
+            'image': observation_space
+        })
+
+    def reset(self, **kwargs):
+        obs = self.env.reset(**kwargs)
+        if self.mode == "partial":
+            image = np.dstack((obs[0]['image'], obs[1]['image']))
+        else:
+            image = obs[0]['image']
+        direction = np.array([obs[0]['direction'], obs[1]['direction']])
+        cur_obs = {
+            'image': image,
+            'direction': direction,
+            'mission': obs[0]['mission']
+        }
+        return cur_obs
+
+    def step(self, action):
+        a1 = action // self.anum
+        a2 = action % self.anum
+
+        # print([a1, a2])
+
+        obs, rewards, done, info = self.env.step([a1, a2])
+
+        if self.mode == "partial":
+            image = np.dstack((obs[0]['image'], obs[1]['image']))
+        else:
+            image = obs[0]['image']
+
+        direction = np.array([obs[0]['direction'], obs[1]['direction']])
+        cur_obs = {
+            'image': image,
+            'direction': direction,
+            'mission': obs[0]['mission']
+        }
+        return cur_obs, rewards[1], done, info
 
 
 from .minigrid import Goal

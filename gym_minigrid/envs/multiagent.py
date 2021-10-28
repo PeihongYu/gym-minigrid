@@ -24,8 +24,8 @@ class MultiAgentEnv(MiniGridEnv):
                  minNumRooms,
                  maxNumRooms,
                  maxRoomSize=10,
-                 view_size=7,
-                 agents_type=None
+                 agents_type=None,
+                 view_size=7
                  ):
         assert minNumRooms > 0
         assert maxNumRooms >= minNumRooms
@@ -38,12 +38,12 @@ class MultiAgentEnv(MiniGridEnv):
         self.rooms = []
         self.door_num = 0
 
-        # if agents_type is None:
-        #     self.agents_type = ['door_opening', 'goal_reaching']
-        # else:
-        #     self.agents_type = agents_type
+        if agents_type is None:
+            self.agents_type = ['door_opening', 'goal_reaching']
+        else:
+            self.agents_type = agents_type
         # self.agents_type = ['door_opening']
-        self.agents_type = ['goal_reaching']
+        # self.agents_type = ['goal_reaching']
 
         agents = []
         if 'door_opening' in self.agents_type:
@@ -51,9 +51,10 @@ class MultiAgentEnv(MiniGridEnv):
         if 'goal_reaching' in self.agents_type:
             agents.append(Agent(1, view_size=view_size, agent_type='goal_reaching'))
 
+        max_steps = 500 if len(self.agents_type) == 2 else self.maxNumRooms * 20
         super(MultiAgentEnv, self).__init__(
             grid_size=25,
-            max_steps=self.maxNumRooms * 20,
+            max_steps=max_steps,
             agents=agents,
             agent_view_size=view_size
         )
@@ -85,6 +86,8 @@ class MultiAgentEnv(MiniGridEnv):
 
             if len(curRoomList) > len(roomList):
                 roomList = curRoomList
+
+        self._shiftRoom(roomList)
 
         # Store the list of rooms in this environment
         assert len(roomList) > 0
@@ -264,13 +267,45 @@ class MultiAgentEnv(MiniGridEnv):
 
         return True
 
+    def _shiftRoom(self, roomList):
+        shiftx = 50
+        shifty = 50
+        for room in roomList:
+            shiftx = room.top[0] if room.top[0] < shiftx else shiftx
+            shifty = room.top[1] if room.top[1] < shifty else shifty
+        for room in roomList:
+            room.top = (room.top[0] - shiftx, room.top[1] - shifty)
+            room.entryDoorPos = (room.entryDoorPos[0] - shiftx, room.entryDoorPos[1] - shifty)
+        return True
+
 
 class MultiAgentEnvN2S4(MultiAgentEnv):
     def __init__(self):
         super().__init__(
             minNumRooms=2,
             maxNumRooms=2,
-            maxRoomSize=4
+            maxRoomSize=4,
+            agents_type=None
+        )
+
+
+class MultiAgentEnvN2S4R(MultiAgentEnv):
+    def __init__(self):
+        super().__init__(
+            minNumRooms=2,
+            maxNumRooms=2,
+            maxRoomSize=4,
+            agents_type=['door_opening']
+        )
+
+
+class MultiAgentEnvN2S4G(MultiAgentEnv):
+    def __init__(self):
+        super().__init__(
+            minNumRooms=2,
+            maxNumRooms=2,
+            maxRoomSize=4,
+            agents_type=['goal_reaching']
         )
 
 
@@ -279,7 +314,28 @@ class MultiAgentEnvN4S5(MultiAgentEnv):
         super().__init__(
             minNumRooms=4,
             maxNumRooms=4,
-            maxRoomSize=5
+            maxRoomSize=5,
+            agents_type=None
+        )
+
+
+class MultiAgentEnvN4S5R(MultiAgentEnv):
+    def __init__(self):
+        super().__init__(
+            minNumRooms=4,
+            maxNumRooms=4,
+            maxRoomSize=5,
+            agents_type=['door_opening']
+        )
+
+
+class MultiAgentEnvN4S5G(MultiAgentEnv):
+    def __init__(self):
+        super().__init__(
+            minNumRooms=4,
+            maxNumRooms=4,
+            maxRoomSize=5,
+            agents_type=['goal_reaching']
         )
 
 
@@ -287,7 +343,8 @@ class MultiAgentEnvN6(MultiAgentEnv):
     def __init__(self):
         super().__init__(
             minNumRooms=6,
-            maxNumRooms=6
+            maxNumRooms=6,
+            agents_type=None
         )
 
 
@@ -297,8 +354,28 @@ register(
 )
 
 register(
+    id='MiniGrid-MultiAgent-N2-S4-A1R-v0',
+    entry_point='gym_minigrid.envs:MultiAgentEnvN2S4R'
+)
+
+register(
+    id='MiniGrid-MultiAgent-N2-S4-A1G-v0',
+    entry_point='gym_minigrid.envs:MultiAgentEnvN2S4G'
+)
+
+register(
     id='MiniGrid-MultiAgent-N4-S5-v0',
     entry_point='gym_minigrid.envs:MultiAgentEnvN4S5'
+)
+
+register(
+    id='MiniGrid-MultiAgent-N4-S5-A1R-v0',
+    entry_point='gym_minigrid.envs:MultiAgentEnvN4S5R'
+)
+
+register(
+    id='MiniGrid-MultiAgent-N4-S5-A1G-v0',
+    entry_point='gym_minigrid.envs:MultiAgentEnvN4S5G'
 )
 
 register(

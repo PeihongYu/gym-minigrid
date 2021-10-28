@@ -357,6 +357,7 @@ class Agent(WorldObj):
         self.index = index
         self.view_size = view_size
         self.carrying = None
+        self.overlaping = None
         self.done = False
 
     def render(self, img):
@@ -768,12 +769,13 @@ class MiniGridEnv(gym.Env):
         right = 1
         forward = 2
 
-        # Pick up an object
-        pickup = 3
-        # Drop an object
-        drop = 4
         # Toggle/activate an object
-        toggle = 5
+        toggle = 3
+
+        # Pick up an object
+        pickup = 4
+        # Drop an object
+        drop = 5
 
         # Done completing task
         done = 6
@@ -802,7 +804,8 @@ class MiniGridEnv(gym.Env):
         self.actions = MiniGridEnv.Actions
 
         # Actions are discrete integer values
-        self.action_space = spaces.Discrete(len(self.actions))
+        # self.action_space = spaces.Discrete(len(self.actions))
+        self.action_space = spaces.Discrete(4)
 
         # Number of cells (width and height) in the agent view
         assert agent_view_size % 2 == 1
@@ -854,6 +857,7 @@ class MiniGridEnv(gym.Env):
         # Item picked up, being carried, initially nothing
         for a in self.agents:
             a.carrying = None
+            a.overlaping = None
             a.done = False
 
         # Step count since episode start
@@ -1164,11 +1168,18 @@ class MiniGridEnv(gym.Env):
             # Move forward
             elif action == self.actions.forward:
                 if fwd_cell == None or fwd_cell.can_overlap():
+                    if agent.overlaping:
+                        self.grid.set(*agent.pos, agent.overlaping)
+                        agent.overlaping = None
+                    else:
+                        self.grid.set(*agent.pos, None)
+
+                    if fwd_cell != None and fwd_cell.can_overlap():
+                        agent.overlaping = fwd_cell
+
                     self.grid.set(*fwd_pos, agent)
-                    self.grid.set(*agent.pos, None)
-                    if np.array_equal(agent.pos, self.goal.pos):
-                        self.grid.set(*agent.pos, self.goal)
                     agent.pos = fwd_pos
+
                 if fwd_cell != None and fwd_cell.type == 'goal' and agent.color == fwd_cell.color:
                     agent.done = True
                     reward = self._reward()
@@ -1220,6 +1231,23 @@ class MiniGridEnv(gym.Env):
 
         return obs, rewards, done, {}
 
+    def gen_key(self):
+        key = []
+        for room in self.rooms:
+            key.append((*room.top, *room.size))
+
+        if 'door_opening' in self.agents_type:
+            for room in self.rooms[1:]:
+                door = self.grid.get(*room.entryDoorPos)
+                key.append((*room.entryDoorPos, door.is_open if door.type == 'door' else True))
+
+        if 'goal_reaching' in self.agents_type:
+            key.append(tuple(self.goal_pos))
+
+        for a in self.agents:
+            key.append((*a.pos, a.index, a.dir))
+
+        return key
 
     def gen_obs_grid(self):
         """
